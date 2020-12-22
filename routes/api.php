@@ -18,17 +18,17 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('users','UserController@store');
-Route::post('login','UserController@login');
+Route::post('users', 'UserController@store');
+Route::post('login', 'UserController@login');
 
-Route::group(['middleware'=>'auth:api'], function(){
-    Route::get('facturas','FacturaController@show');
-    Route::post('validacion','FacturaController@validacion');
-    Route::post('bloquear','BloquearController@store');
-    Route::get('bloquear','PlanoController@Plano');
+Route::group(['middleware' => 'auth:api'], function () {
+    Route::post('facturas', 'FacturaController@show');
+    Route::post('validacion', 'FacturaController@validacion');
+    Route::post('bloquear', 'BloquearController@store');
+    Route::get('bloquear', 'PlanoController@Plano');
     //Route::post('bloquear','PlanoController@Plano');
-    Route::post('logout','UserController@logout');
-    Route::post('pagador','ClasificarController@Clasifica');
+    Route::post('logout', 'UserController@logout');
+    Route::post('pagador', 'ClasificarController@Clasifica');
 });
 
 //Route::apiResource('facturas','FacturaController');

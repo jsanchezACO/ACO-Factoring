@@ -7,6 +7,7 @@ use App\Models\Facturas;
 use App\Models\Planos;
 use Illuminate\Support\Arr;
 use SoapFault;
+use Illuminate\Support\Facades\DB;
 
 class AsignarController extends Controller
 {
@@ -18,12 +19,15 @@ class AsignarController extends Controller
             switch ($request->CIA) {
                 case 'AIIR':
                     $cia = 'CorralC';
+                    $db = 'database.Corral';
                     break;
                 case 'AILS':
                     $cia = 'LenoslC';
+                    $db = 'database.Lenos';
                     break;
                 case 'AIPJ':
                     $cia = 'PapaC';
+                    $db = 'database.PJ';
                     break;
             }
 
@@ -70,7 +74,7 @@ class AsignarController extends Controller
             //Construcción Linea Documento
             $F_NUMERO_REG = $this->completaCampo($F_NUMERO_REG + 1, 7, 'NUM');
             $linea =  $F_NUMERO_REG . $F_TIPO_REG . $F_SUBTIPO_REG . $F_VERSION_REG . $F_CIA . $F_CONSEC_AUTO_REG . $ID_CO . $ID_TIPO_DOCTO . $CONSEC_DOCTO . $Fecha . $ID_TERCERO . $ID_CLASE_DOCTO . $IND_ESTADO .
-            $IND_IMPRESION . $NOTAS . $ID_MANDATO . $RECALCULAR_RX . $ID_TIPO_CAMBIO_RX . $TASA_CONV_RX . $TASA_LOCAL_RX . $ID_CO_RP . $ID_TIPO_DOCTO_RP . $CONSEC_DOCTO_RP . $ID_MOTIVO_OTRO;
+                $IND_IMPRESION . $NOTAS . $ID_MANDATO . $RECALCULAR_RX . $ID_TIPO_CAMBIO_RX . $TASA_CONV_RX . $TASA_LOCAL_RX . $ID_CO_RP . $ID_TIPO_DOCTO_RP . $CONSEC_DOCTO_RP . $ID_MOTIVO_OTRO;
             $xml .= "<Linea>" . $linea . "</Linea>\r\n";
 
             //Construcción Linea Cuenta x Pagar
@@ -97,11 +101,14 @@ class AsignarController extends Controller
             $FECHA_RADICACION = $this->completaCampo($Fecha, 8, 'ALFA'); //
             $NOTAS = $this->completaCampo('Documento generado por plataforma factoring, Transaccion: ' . $request->Transaccion, 255, 'ALFA'); //Observaciones del documento                        
 
-            $Facturas = Facturas::select( 'ValorFactura', 'Sucursal', 'Cuenta','CO', 'Prefijo', 'Factura', 'FechaFactura', 'Vencimiento', 'PP', 'Impuesto', 'Base'
-            )->where('Idtransaccion', $request->Transaccion)->get();
+            $Facturas = Facturas::select('ValorFactura', 'Sucursal', 'CO', 'Prefijo', 'Factura', 'FechaFactura', 'Vencimiento', 'PP', 'Impuesto', 'Base', 'Documento')->where('Idtransaccion', $request->Transaccion)->get();
             foreach ($Facturas as $factura) {
+
+                $Documento = $factura['Documento'];
+                $cuenta = DB::connection(config($db))->select('SELECT SUBSTRING([f253_id],1,2) FROM [t351_co_mov_docto] INNER JOIN [t253_co_auxiliares] ON [f253_rowid]=[f351_rowid_auxiliar] WHERE [f351_rowid]=?', [$Documento]);
+
                 //Primer Registro
-                $ID_AUXILIAR_P = $factura->Cuenta . '0511';
+                $ID_AUXILIAR_P = $cuenta . '0511';
                 $ID_TERCERO = $this->completaCampo($request->NIT, 15, 'ALFA'); //                
                 $ID_CO_MOV = $this->completaCampo($factura->CO, 3, 'NUM'); //Centro de operación del movimiento
                 $ID_AUXILIAR = $this->completaCampo($ID_AUXILIAR_P, 20, 'ALFA'); //cuenta contable con la que se realizara el movimiento
@@ -133,7 +140,7 @@ class AsignarController extends Controller
                 $VALOR_CR2 = $this->formatoSigno($factura->ValorFactura, 15);    //Valor de factura a pagar   
                 $VALOR_DB = $this->formatoSigno(0, 15);    //Valor debito se deja en cero
                 $VALOR_DB2 = $this->formatoSigno(0, 15);    //Valor debito   
-                
+
                 //Construccion linea Reclacifica Tercero
                 $F_NUMERO_REG = $this->completaCampo($F_NUMERO_REG + 1, 7, 'NUM');
                 $linea =  $F_NUMERO_REG . $F_TIPO_REG . $F_SUBTIPO_REG . $F_VERSION_REG . $F_CIA . $ID_CO . $ID_TIPO_DOCTO .

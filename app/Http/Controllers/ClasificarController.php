@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Facturas;
 use App\Models\Planos;
 use SoapFault;
+use Illuminate\Support\Facades\DB;
 
 class ClasificarController extends Controller
 {
@@ -17,12 +18,15 @@ class ClasificarController extends Controller
             switch ($request->CIA) {
                 case 'AIIR':
                     $cia = 'CorralC';
+                    $db = 'database.Corral';
                     break;
                 case 'AILS':
                     $cia = 'LenoslC';
+                    $db = 'database.Lenos';
                     break;
                 case 'AIPJ':
                     $cia = 'PapaC';
+                    $db = 'database.PJ';
                     break;
             }
             //DD($request->CIA);
@@ -78,7 +82,6 @@ class ClasificarController extends Controller
                 $Facturas = Facturas::select(
                     'ValorFactura',
                     'Sucursal',
-                    'Cuenta',
                     'CO',
                     'Prefijo',
                     'Factura',
@@ -89,6 +92,8 @@ class ClasificarController extends Controller
                     'Base'
                 )->where('Idtransaccion', $request->Transaccion)
                     ->where('Documento', $Clasifica['Documento'])->first();
+                $Documento = $Clasifica['Documento'];
+                $cuenta = DB::connection(config($db))->select('SELECT SUBSTRING([f253_id],1,2) FROM [t351_co_mov_docto] INNER JOIN [t253_co_auxiliares] ON [f253_rowid]=[f351_rowid_auxiliar] WHERE [f351_rowid]=?', [$Documento]);
 
                 //Construcción Linea Cuenta x Pagar
                 $F_TIPO_REG = $this->completaCampo(351, 4, 'NUM'); //Tipo de registro;
@@ -111,7 +116,7 @@ class ClasificarController extends Controller
                 $FECHA_RADICACION = $this->completaCampo($Fecha, 8, 'ALFA'); //
                 $NOTAS = $this->completaCampo('Documento generado por plataforma factoring, Transaccion: ' . $request->Transaccion, 255, 'ALFA'); //Observaciones del documento                        
                 $ID_CO_MOV = $this->completaCampo($Facturas->CO, 3, 'NUM'); //Centro de operación del movimiento
-                $ID_AUXILIAR_P = $Facturas->Cuenta . '0511';
+                $ID_AUXILIAR_P = $cuenta . '0511';
                 $ID_AUXILIAR = $this->completaCampo($ID_AUXILIAR_P, 20, 'ALFA'); //cuenta contable con la que se realizara el movimiento
                 $ID_SUCURSAL = $this->completaCampo($Facturas->Sucursal, 3, 'ALFA'); //Sucursal proveedor
                 $PREFIJO_CRUCE = $this->completaCampo($Facturas->Prefijo, 20, 'ALFA'); //Prefijo de documento de cruce
@@ -139,9 +144,9 @@ class ClasificarController extends Controller
                 $xml .= "<Linea>" . $linea . "</Linea>\r\n";
 
                 //Tercero
-                $ID_AUXILIAR_P = $Facturas->Cuenta . '0505';
+                $ID_AUXILIAR_P = $cuenta . '0505';
                 $ID_AUXILIAR = $this->completaCampo($ID_AUXILIAR_P, 20, 'ALFA'); //cuenta contable con la que se realizara el movimiento
-                
+
                 $ID_TERCERO = $this->completaCampo($request->Tercero, 15, 'ALFA'); //
                 $VALOR_CR = $this->formatoSigno(0, 15);    //Valor de factura a pagar
                 $VALOR_CR2 = $this->formatoSigno(0, 15);    //Valor de factura a pagar              
@@ -249,5 +254,4 @@ class ClasificarController extends Controller
         $valor = '+' . $valor . "." . $decimal;
         return $valor;
     }
-
 }
